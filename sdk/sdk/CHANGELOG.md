@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `#[account(...)]` now keeps canonical dependency WIT interfaces unchanged, fixing a rare
   component-link failure when plain note, transaction-script, or sibling imports of a dependency
   are linked with generated FPI bindings. FPI bindings now also preserve anonymous compound types
-  #1276
+  and coexist when separate wrappers select different dependency sets #1276
 
 ### BREAKING
 - Component methods must now be explicitly marked `#[account_procedure]` to be part of the account
