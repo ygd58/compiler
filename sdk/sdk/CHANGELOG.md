@@ -53,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `faucet::{mint, burn}` take a pre-built `Asset`.
   - `output_note::create` can now only be called from account-component context (runtime-enforced);
     tx/note scripts create notes through an account component wrapper method.
+- `#[account(...)]` wrapper structs are supported only at module scope so their generated component
+  metadata has a stable semantic identity. Move a wrapper declared inside a function or block to
+  its enclosing module.
 
 ### Added
 - `#[account(...)]` references accept an `as Alias` to rename the generated trait, e.g.
