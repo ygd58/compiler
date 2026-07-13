@@ -52,7 +52,7 @@ authors = []
 crate-type = ["cdylib"]
 
 [dependencies]
-miden = {{ path = "{sdk_path}" }}
+miden = {{ path = "{sdk_path}", features = ["internal-wit-emit"] }}
 
 [package.metadata.component]
 package = "{account_package}"
@@ -154,7 +154,7 @@ authors = []
 crate-type = ["cdylib"]
 
 [dependencies]
-miden = {{ path = "{sdk_path}" }}
+miden = {{ path = "{sdk_path}", features = ["internal-wit-emit"] }}
 
 [package.metadata.miden]
 project-kind = "note-script"
