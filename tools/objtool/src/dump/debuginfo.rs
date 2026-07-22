@@ -5,12 +5,12 @@
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 use clap::Args;
-use miden_core::operations::DebugVarLocation;
+use miden_assembly_syntax::ast::DebugVarLocation;
 use miden_mast_package::{
     MastForest, Package,
     debug_info::{
         DebugFileInfo, DebugFunctionInfo, DebugPrimitiveType, DebugSourceNodeId, DebugSourceVar,
-        DebugTypeIdx, DebugTypeInfo, PackageDebugInfo,
+        DebugTypeInfo, PackageDebugInfo,
     },
 };
 
@@ -564,7 +564,7 @@ fn print_variable(var: &DebugSourceVar, debug_info: &PackageDebugInfo, raw: bool
     if let Some(type_id) = var.type_id {
         if raw {
             print!("type[{type_id}]");
-        } else if let Some(ty) = debug_info.get_type(DebugTypeIdx::from(type_id)) {
+        } else if let Some(ty) = debug_info.get_type(type_id) {
             print_type_brief(ty, debug_info);
         } else {
             print!("<invalid type>");
@@ -670,12 +670,11 @@ fn print_locations(debug_info: &PackageDebugInfo) {
 
             // Print type info if present and we can resolve it
             if let Some(type_id) = info.type_id {
-                let type_idx = DebugTypeIdx::from(type_id);
-                if let Some(ty) = debug_info.get_type(type_idx) {
+                if let Some(ty) = debug_info.get_type(type_id) {
                     print!(" : ");
                     print_type_brief(ty, debug_info);
                 } else {
-                    print!(" : type[{type_idx}]");
+                    print!(" : type[{type_id}]");
                 }
             }
 

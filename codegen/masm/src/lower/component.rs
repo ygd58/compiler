@@ -1,8 +1,10 @@
 use alloc::{collections::BTreeSet, sync::Arc, vec::Vec};
 
 use miden_assembly::{PathBuf as LibraryPath, ast::InvocationTarget};
-use miden_assembly_syntax::{ast::Attribute, parser::WordValue};
-use miden_core::operations::DebugVarLocation;
+use miden_assembly_syntax::{
+    ast::{Attribute, DebugVarLocation},
+    parser::WordValue,
+};
 use midenc_hir::{
     FunctionIdent, Op, OpExt, SourceSpan, Span, Symbol, TraceTarget, Type, ValueRef,
     diagnostics::IntoDiagnostic,
