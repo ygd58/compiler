@@ -20,7 +20,10 @@ use midenc_hir::{
         },
         debuginfo::{
             DIBuilder,
-            attributes::{CompileUnitAttr, Expression, ExpressionOp, SubprogramAttr},
+            attributes::{
+                CompileUnitAttr, Expression, ExpressionOp, INLINE_CALL_CHAIN_ATTR_NAME,
+                InlineCallChain, InlineCallChainAttr, InlineCallFrame, SubprogramAttr,
+            },
         },
     },
     interner::Symbol,
@@ -85,11 +88,15 @@ enum BlockStatus {
 
 pub struct SSABuilderListener {
     builder: Rc<RefCell<FunctionBuilderContext>>,
+    active_inline_calls: Rc<RefCell<Vec<InlineCallFrame>>>,
 }
 
 impl SSABuilderListener {
-    pub const fn new(builder: Rc<RefCell<FunctionBuilderContext>>) -> Self {
-        Self { builder }
+    pub fn new(builder: Rc<RefCell<FunctionBuilderContext>>) -> Self {
+        Self {
+            builder,
+            active_inline_calls: Default::default(),
+        }
     }
 }
 
@@ -98,7 +105,16 @@ impl Listener for SSABuilderListener {
         ListenerType::Builder
     }
 
-    fn notify_operation_inserted(&self, op: OperationRef, prev: ProgramPoint) {
+    fn notify_operation_inserted(&self, mut op: OperationRef, prev: ProgramPoint) {
+        let inline_calls = self.active_inline_calls.borrow().clone();
+        if !inline_calls.is_empty() {
+            let context = op.borrow().context_rc();
+            let attr = context
+                .create_attribute::<InlineCallChainAttr, _>(InlineCallChain::new(inline_calls))
+                .as_attribute_ref();
+            op.borrow_mut().set_attribute(INLINE_CALL_CHAIN_ATTR_NAME, attr);
+        }
+
         let op = op.borrow();
         let mut builder = self.builder.borrow_mut();
 
@@ -144,11 +160,14 @@ pub struct FunctionBuilderExt<'c, B: ?Sized + Builder> {
     param_values: Vec<(Variable, ValueRef)>,
     param_dbg_emitted: bool,
     active_wasm_local_debug_vars: BTreeMap<u32, Vec<usize>>,
+    active_inline_calls: Rc<RefCell<Vec<InlineCallFrame>>>,
 }
 
 impl<'c> FunctionBuilderExt<'c, OpBuilder<SSABuilderListener>> {
     pub fn new(func: FunctionRef, builder: &'c mut OpBuilder<SSABuilderListener>) -> Self {
         let func_ctx = builder.listener().map(|l| l.builder.clone()).unwrap();
+        let active_inline_calls =
+            builder.listener().map(|l| l.active_inline_calls.clone()).unwrap();
         debug_assert!(func_ctx.borrow().is_empty());
 
         let inner = FunctionBuilder::new(func, builder);
@@ -160,6 +179,7 @@ impl<'c> FunctionBuilderExt<'c, OpBuilder<SSABuilderListener>> {
             param_values: Vec::new(),
             param_dbg_emitted: false,
             active_wasm_local_debug_vars: BTreeMap::new(),
+            active_inline_calls,
         }
     }
 }
@@ -172,6 +192,10 @@ impl<B: ?Sized + Builder> FunctionBuilderExt<'_, B> {
         self.debug_info = Some(info);
         self.param_dbg_emitted = false;
         self.refresh_function_debug_attrs();
+    }
+
+    pub fn set_inline_calls(&mut self, inline_calls: Vec<InlineCallFrame>) {
+        *self.active_inline_calls.borrow_mut() = inline_calls;
     }
 
     pub fn emit_dbg_value_for_var(&mut self, var: Variable, value: ValueRef, span: SourceSpan) {

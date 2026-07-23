@@ -3208,13 +3208,10 @@ dependencies = [
 name = "miden-mast-package"
 version = "0.25.8"
 dependencies = [
- "hashbrown 0.17.1",
  "log",
  "miden-assembly-syntax",
  "miden-core",
  "miden-debug-types",
- "miden-utils-indexing 0.25.8",
- "rustc-hash",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -3567,7 +3564,7 @@ dependencies = [
 name = "miden-utils-indexing"
 version = "0.25.8"
 dependencies = [
- "miden-serde-utils 0.28.0",
+ "miden-crypto",
  "proptest",
  "serde",
  "thiserror 2.0.18",
