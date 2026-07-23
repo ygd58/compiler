@@ -265,6 +265,8 @@ define_instruction_semantics! {
         Instruction::Call(_),
         Instruction::SysCall(_),
         Instruction::DebugVar(_),
+        Instruction::DebugInlineCall(_),
+        Instruction::DebugInlineCallClear,
         Instruction::Emit,
         Instruction::EmitImm(_),
         Instruction::SysEvent(_),
