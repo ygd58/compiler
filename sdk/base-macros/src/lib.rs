@@ -74,6 +74,7 @@ mod fpi;
 mod generate;
 mod manifest_paths;
 mod note;
+mod note_schema;
 mod script;
 mod types;
 mod util;

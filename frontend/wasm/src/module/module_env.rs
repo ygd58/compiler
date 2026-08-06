@@ -4,7 +4,9 @@ use std::path::PathBuf;
 
 use cranelift_entity::{PrimaryMap, packed_option::ReservedValue};
 use midenc_frontend_wasm_metadata::{
-    FrontendMetadata, WASM_FRONTEND_METADATA_CUSTOM_SECTION_NAME, decode_section,
+    FrontendMetadata, PackageSections, WASM_ACCOUNT_COMPONENT_METADATA_CUSTOM_SECTION_NAME,
+    WASM_FRONTEND_METADATA_CUSTOM_SECTION_NAME, WASM_NOTE_STORAGE_SCHEMA_CUSTOM_SECTION_NAME,
+    decode_section,
 };
 use midenc_hir::{FxHashMap, FxHashSet, Ident, interner::Symbol};
 use midenc_session::diagnostics::{DiagnosticsHandler, IntoDiagnostic, Report, Severity};
@@ -84,8 +86,8 @@ pub struct ParsedModule<'data> {
     /// which function is currently being defined.
     code_index: u32,
 
-    /// The serialized AccountComponentMetadata (name, description, storage layout, etc.)
-    pub account_component_metadata_bytes: Option<&'data [u8]>,
+    /// Metadata payloads to attach to the Miden package.
+    pub sections: PackageSections,
     /// Frontend-only component metadata entries emitted by SDK macros (empty when none present).
     pub component_frontend_metadata: Vec<FrontendMetadata>,
 }
@@ -325,8 +327,32 @@ impl<'a, 'data> ModuleEnvironment<'a, 'data> {
                 }
             }
             Payload::CustomSection(s) if s.name().starts_with(".debug_") => self.dwarf_section(&s),
-            Payload::CustomSection(s) if s.name() == "rodata,miden_account" => {
-                self.result.account_component_metadata_bytes = Some(s.data());
+            Payload::CustomSection(s)
+                if s.name() == WASM_ACCOUNT_COMPONENT_METADATA_CUSTOM_SECTION_NAME =>
+            {
+                self.result.sections.account_component_metadata = Some(s.data().to_vec());
+            }
+            Payload::CustomSection(s)
+                if s.name() == WASM_NOTE_STORAGE_SCHEMA_CUSTOM_SECTION_NAME =>
+            {
+                if self.result.sections.note_storage_schema.is_some() {
+                    return Err(diagnostics
+                        .diagnostic(Severity::Error)
+                        .with_message(
+                            "wasm error: multiple note storage schema sections were found; only \
+                             one is allowed per core Wasm module",
+                        )
+                        .into_report());
+                }
+                core::str::from_utf8(trim_trailing_nuls(s.data())).map_err(|err| {
+                    diagnostics
+                        .diagnostic(Severity::Error)
+                        .with_message(format!(
+                            "failed to parse note storage schema section as UTF-8: {err}"
+                        ))
+                        .into_report()
+                })?;
+                self.result.sections.note_storage_schema = Some(s.data().to_vec());
             }
             Payload::CustomSection(s) if s.name() == WASM_FRONTEND_METADATA_CUSTOM_SECTION_NAME => {
                 let metadata = decode_section(s.data()).map_err(|err| {
@@ -967,4 +993,10 @@ impl<'a, 'data> ModuleEnvironment<'a, 'data> {
         }
         Ok(())
     }
+}
+
+/// Removes the zero padding from a metadata section payload.
+fn trim_trailing_nuls(bytes: &[u8]) -> &[u8] {
+    let len = bytes.iter().rposition(|byte| *byte != 0).map_or(0, |index| index + 1);
+    &bytes[..len]
 }

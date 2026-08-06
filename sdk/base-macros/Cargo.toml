@@ -42,6 +42,7 @@ wit-component = { workspace = true, optional = true }
 miden-protocol = { workspace = true, features = ["std"] }
 miden-field.workspace = true
 miden-field-repr.workspace = true
+midenc-expect-test.workspace = true
 wit-component.workspace = true
 
 [package.metadata.docs.rs]

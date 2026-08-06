@@ -9,6 +9,7 @@ mod counter_metadata;
 mod counter_note;
 mod fibonacci;
 mod is_prime;
+mod note_schema_metadata;
 mod storage_metadata;
 
 fn persist_cargo_miden_dependency(

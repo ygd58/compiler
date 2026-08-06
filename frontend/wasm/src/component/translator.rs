@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use cranelift_entity::PrimaryMap;
-use midenc_frontend_wasm_metadata::{FrontendMetadata, ProtocolExportKind};
+use midenc_frontend_wasm_metadata::{FrontendMetadata, PackageSections, ProtocolExportKind};
 use midenc_hir::{
     self as hir2, BuilderExt, Context, FxHashMap, FxHashSet, Ident, SymbolNameComponent,
     SymbolPath,
@@ -176,7 +176,7 @@ impl<'a> ComponentTranslator<'a> {
         let account_component_metadata_bytes_vec: Vec<Vec<u8>> = self
             .nested_modules
             .into_iter()
-            .flat_map(|t| t.1.account_component_metadata_bytes.map(|slice| slice.to_vec()))
+            .flat_map(|t| t.1.sections.account_component_metadata.clone())
             .collect();
         assert!(
             account_component_metadata_bytes_vec.len() <= 1,
@@ -184,10 +184,25 @@ impl<'a> ComponentTranslator<'a> {
         );
         let account_component_metadata_bytes =
             account_component_metadata_bytes_vec.first().map(ToOwned::to_owned);
+        let note_storage_schema_bytes_vec = self
+            .nested_modules
+            .iter()
+            .filter_map(|(_, module)| module.sections.note_storage_schema.clone())
+            .collect::<Vec<_>>();
+        if note_storage_schema_bytes_vec.len() > 1 {
+            return Err(Report::msg(
+                "multiple core Wasm modules contain a note storage schema section; only one is \
+                 allowed per component",
+            ));
+        }
+        let note_storage_schema = note_storage_schema_bytes_vec.into_iter().next();
 
         let output = FrontendOutput {
             component: self.result.component,
-            account_component_metadata_bytes,
+            sections: PackageSections {
+                account_component_metadata: account_component_metadata_bytes,
+                note_storage_schema,
+            },
         };
         Ok(output)
     }

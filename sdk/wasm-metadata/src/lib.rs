@@ -1,4 +1,4 @@
-//! Shared encoding for frontend-only Wasm metadata emitted by SDK macros.
+//! Shared metadata definitions for SDK macros and the compiler.
 
 #![deny(warnings)]
 #![deny(missing_docs)]
@@ -14,6 +14,27 @@ use serde::{Deserialize, Serialize};
 /// Name of the Wasm custom section used to store frontend metadata bytes.
 pub const WASM_FRONTEND_METADATA_CUSTOM_SECTION_NAME: &str =
     "rodata,miden_account_component_frontend";
+
+/// Name of the Wasm custom section that stores serialized account component metadata.
+pub const WASM_ACCOUNT_COMPONENT_METADATA_CUSTOM_SECTION_NAME: &str = "rodata,miden_account";
+
+/// Name of the Wasm custom section that stores a note storage schema.
+pub const WASM_NOTE_STORAGE_SCHEMA_CUSTOM_SECTION_NAME: &str = "rodata,miden_note_schema";
+
+/// Name of the Miden package section that stores a note storage schema.
+pub const PACKAGE_NOTE_STORAGE_SCHEMA_SECTION_ID: &str = "note_storage_schema";
+
+/// Name of the Miden package section that stores a note codec.
+pub const PACKAGE_NOTE_CODEC_SECTION_ID: &str = "note_codec";
+
+/// Metadata payloads that the compiler attaches to a Miden package.
+#[derive(Clone, Debug, Default)]
+pub struct PackageSections {
+    /// Serialized account component metadata.
+    pub account_component_metadata: Option<Vec<u8>>,
+    /// The note storage schema.
+    pub note_storage_schema: Option<Vec<u8>>,
+}
 
 /// Frontend-only metadata emitted by the SDK macros into a dedicated Wasm custom section.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

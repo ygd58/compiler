@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added optional `codec-component` support to the internal `miden-note-schema` host crate. It can
+  load author-defined note codecs from a package without adding Wasmtime to the default feature
+  set or the guest SDK dependency graph.
+- Added typed host note-storage bindings through the internal `miden-note-bindings` macros. Bindings
+  can load a built note project or an exact `.masp`, generate native Rust storage types, and convert
+  typed values to and from note storage.
+- `#[note]` now embeds a WIT storage schema for named-field note structs in the
+  `note_storage_schema` section of the compiled `.masp`. Schema records preserve Rust doc comments
+  and can include nested types declared with `#[export_type]` before the note struct. Unit structs
+  emit no schema; tuple structs and `Vec` fields are not supported yet.
+
 ## [0.14.0-rc.1]
 
 ### Added
