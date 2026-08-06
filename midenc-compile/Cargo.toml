@@ -28,6 +28,8 @@ std = [
     "dep:tempfile",
     "dep:toml_edit",
     "dep:wat",
+    "dep:wit-component",
+    "dep:wit-parser",
 ]
 
 [dependencies]
@@ -51,3 +53,5 @@ tempfile = { workspace = true, optional = true }
 toml_edit = { workspace = true, optional = true, features = ["parse", "display"] }
 thiserror.workspace = true
 wat = { workspace = true, optional = true }
+wit-component = { workspace = true, optional = true }
+wit-parser = { workspace = true, optional = true }
