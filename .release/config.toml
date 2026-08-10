@@ -237,6 +237,42 @@ unit = "private"
 publish = false
 
 [[packages]]
+name = "miden-note-schema"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
+name = "miden-note-schema-codegen"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
+name = "miden-note-bindings"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
+name = "miden-note-bindings-macros"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
+name = "miden-note-codec"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
+name = "miden-note-codec-macros"
+unit = "sdk"
+publish = true
+version-source = "sdk"
+
+[[packages]]
 name = "midenc-benchmark-runner"
 unit = "private"
 publish = false
