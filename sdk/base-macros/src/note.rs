@@ -9,8 +9,8 @@ use syn::{
 
 use crate::{
     boilerplate::runtime_boilerplate,
-    note_schema::expand_note_storage_schema,
-    util::generate_frontend_link_section,
+    note_schema::{expand_note_storage_schema, note_storage_schema_uniqueness_guard},
+    util::{NOTE_NAMED_FIELDS_ERROR, generate_frontend_link_section},
     wit_builder::WitBuilder,
     wit_world::{ManifestPackage, write_world_block},
 };
@@ -100,6 +100,7 @@ pub(crate) fn expand_note_script(
 
 fn expand_note_struct(item_struct: ItemStruct) -> TokenStream2 {
     let struct_ident = &item_struct.ident;
+    let uniqueness_guard = note_storage_schema_uniqueness_guard();
 
     if !item_struct.generics.params.is_empty() {
         return syn::Error::new(
@@ -154,8 +155,7 @@ fn expand_note_struct(item_struct: ItemStruct) -> TokenStream2 {
             (from_impl, schema_static)
         }
         syn::Fields::Unnamed(fields) => {
-            return syn::Error::new(fields.span(), "note storage schema needs named fields")
-                .into_compile_error();
+            return syn::Error::new(fields.span(), NOTE_NAMED_FIELDS_ERROR).into_compile_error();
         }
     };
 
@@ -163,6 +163,7 @@ fn expand_note_struct(item_struct: ItemStruct) -> TokenStream2 {
         #item_struct
         #from_impl
         #schema_static
+        #uniqueness_guard
     }
 }
 
@@ -660,6 +661,7 @@ mod tests {
         let tokens = expand_note_struct(item_struct).to_string();
 
         assert!(tokens.contains("__MIDEN_NOTE_STORAGE_SCHEMA_BYTES"));
+        assert!(tokens.contains(crate::note_schema::NOTE_STORAGE_SCHEMA_UNIQUENESS_GUARD_SYMBOL));
         assert!(tokens.contains("miden_note_schema"));
     }
 
@@ -672,6 +674,7 @@ mod tests {
         let tokens = expand_note_struct(item_struct).to_string();
 
         assert!(!tokens.contains("__MIDEN_NOTE_STORAGE_SCHEMA_BYTES"));
+        assert!(tokens.contains(crate::note_schema::NOTE_STORAGE_SCHEMA_UNIQUENESS_GUARD_SYMBOL));
     }
 
     #[test]
@@ -682,7 +685,7 @@ mod tests {
 
         let tokens = expand_note_struct(item_struct).to_string();
 
-        assert!(tokens.contains("note storage schema needs named fields"));
+        assert!(tokens.contains(NOTE_NAMED_FIELDS_ERROR));
     }
 
     #[test]

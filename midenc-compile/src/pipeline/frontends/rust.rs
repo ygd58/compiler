@@ -1185,6 +1185,7 @@ impl Frontend for RustProjectFrontend {
             &found.component,
             &found.sections,
             cx.assembly(),
+            &cx.session(),
         )
     }
 }
