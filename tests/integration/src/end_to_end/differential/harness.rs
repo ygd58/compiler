@@ -288,3 +288,89 @@ fn build_host_cdylib(project_root: &std::path::Path, pkg_name: &str) -> PathBuf 
         )
     })
 }
+
+/// Three-way comparison for isolating whether a divergence originates in HIR construction
+/// (folding/optimization) or in MASM lowering: runs `entrypoint(a, b)` natively, through
+/// [`midenc_hir_eval::HirEvaluator`] against the exact post-rewrite HIR that gets lowered to
+/// MASM (see [`CompilerTest::hir`]), and through the compiled MASM package, then asserts all
+/// three agree.
+///
+/// If HIR-eval matches native but MASM diverges: the bug is in MASM lowering/scheduling, not
+/// in how the HIR was built/folded. If HIR-eval *also* diverges from native: the bug is
+/// upstream of MASM lowering, in HIR construction (e.g. a folding pass).
+pub(super) fn run_case_hir_eval(name: &str, source: &str, a: u32, b: u32) {
+    use midenc_hir::{Immediate, SymbolNameComponent, SymbolPath};
+    use midenc_hir_eval::{HirEvaluator, Value};
+
+    let pkg_name = format!("differential_{name}");
+    let manifest = cargo_toml(&pkg_name);
+    let miden_project_manifest = miden_project_toml(&pkg_name);
+    let full_source = format!("{CASE_HEADER}{source}");
+
+    let masm_proj = project(&format!("{pkg_name}_masm"))
+        .file("miden-project.toml", &miden_project_manifest)
+        .file("Cargo.toml", &manifest)
+        .file("src/lib.rs", &full_source)
+        .build();
+    let mut test = CompilerTest::rust_source_cargo_miden(
+        masm_proj.root(),
+        WasmTranslationConfig::default(),
+        [],
+    );
+    let package = test.compile_package();
+    let hir = test.hir();
+
+    let native_proj = project(&format!("{pkg_name}_native"))
+        .file("Cargo.toml", &manifest)
+        .file("src/lib.rs", &full_source)
+        .build();
+    let dylib_path = build_host_cdylib(&native_proj.root(), &pkg_name);
+    let lib = unsafe { libloading::Library::new(&dylib_path) }
+        .unwrap_or_else(|e| panic!("failed to load {}: {e}", dylib_path.display()));
+    type EntryFn = unsafe extern "C" fn(u32, u32) -> u32;
+    let entry: libloading::Symbol<EntryFn> = unsafe { lib.get(b"entrypoint\0") }
+        .unwrap_or_else(|e| panic!("missing `entrypoint` in {}: {e}", dylib_path.display()));
+
+    let native_out = unsafe { entry(a, b) };
+
+    let exec =
+        executor_with_std(vec![Felt::new_unchecked(a as u64), Felt::new_unchecked(b as u64)]);
+    let masm_out: u32 = exec.execute_into(package.clone(), test.session.source_manager.clone());
+
+    let mut evaluator = HirEvaluator::new(hir.borrow().as_operation().context_rc());
+    let op = hir
+        .borrow()
+        .symbol_manager()
+        .lookup_symbol_ref(
+            &SymbolPath::new([
+                SymbolNameComponent::Component("root_ns:root@1.0.0".into()),
+                SymbolNameComponent::Component(pkg_name.as_str().into()),
+                SymbolNameComponent::Leaf("entrypoint".into()),
+            ])
+            .unwrap_or_else(|e| panic!("failed to build symbol path: {e}")),
+        )
+        .unwrap_or_else(|| panic!("no `entrypoint` symbol found in {pkg_name}'s HIR component"));
+    let result = evaluator
+        .eval(
+            &op.borrow(),
+            [Value::Immediate(Immediate::U32(a)), Value::Immediate(Immediate::U32(b))],
+        )
+        .unwrap_or_else(|err| panic!("HIR eval trapped: {err}"));
+    let Value::Immediate(Immediate::U32(hir_eval_out)) = result[0] else {
+        panic!("expected u32 immediate result from HIR eval, got {:?}", result[0]);
+    };
+
+    println!(
+        "{name}({a}, {b}): native={native_out}, hir_eval={hir_eval_out}, masm={masm_out}"
+    );
+    assert_eq!(
+        native_out, hir_eval_out,
+        "{name}: native vs HIR-eval mismatch for inputs ({a}, {b}) -- bug is upstream of MASM \
+         lowering, in HIR construction/folding"
+    );
+    assert_eq!(
+        native_out, masm_out,
+        "{name}: native vs masm mismatch for inputs ({a}, {b}) -- HIR-eval agreed with native \
+         ({hir_eval_out}), so the bug is specifically in MASM lowering/scheduling"
+    );
+}

@@ -1,6 +1,6 @@
 //! Signed comparisons, division/remainder, shifts, and the signed widening-multiply family.
 
-use super::super::harness::{run_case, run_case_with_inputs};
+use super::super::harness::{run_case, run_case_hir_eval, run_case_with_inputs};
 
 /// Signed widening shapes (the corpus otherwise never creates `arith.sext`):
 /// extend_i32_s, extend8/16/32_s, and `i64.mul_wide_s` whose constant
@@ -28,6 +28,21 @@ fn sext_shapes_repro() {
         "sext_shapes_repro",
         include_str!("../cases/case_sext_shapes.rs"),
         &[(3022925119, 3340151117)],
+    );
+}
+
+/// Three-way variant of `sext_shapes_repro`: also evaluates the exact post-rewrite HIR via
+/// `midenc_hir_eval::HirEvaluator` to isolate whether the divergence originates in HIR
+/// construction (folding) or in MASM lowering. See `run_case_hir_eval`'s doc comment.
+#[test]
+#[ignore = "diagnostic three-way (native/HIR-eval/MASM) comparison for the sext_shapes_repro \
+            divergence -- see run_case_hir_eval"]
+fn sext_shapes_repro_hir_eval() {
+    run_case_hir_eval(
+        "sext_shapes_repro",
+        include_str!("../cases/case_sext_shapes.rs"),
+        3022925119,
+        3340151117,
     );
 }
 
@@ -110,11 +125,9 @@ fn i64_sdiv() {
 }
 
 /// Reproducer for a compile-time gap: signed 64-bit `%` with a dynamic
-/// divisor — `arith.Mod` on I64 reaches `checked_mod`, whose dispatch has no
-/// I64 arm (and no wasm.I64RemS op or i64 mod intrinsic exists to back one).
+/// divisor — `arith.Mod` on I64 reaches `checked_mod`, whose dispatch now has an I64 arm
+/// backed by `::intrinsics::i64::checked_mod`.
 #[test]
-#[ignore = "compile-time compiler panic: 'not implemented: checked_mod for i64 is not supported' \
-            (codegen/masm/src/emit/binary.rs:665); i64 % with a dynamic divisor cannot compile"]
 fn i64_srem() {
     run_case("i64_srem", include_str!("../cases/case_i64_srem.rs"));
 }
