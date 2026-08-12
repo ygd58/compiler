@@ -343,7 +343,6 @@ pub(super) fn run_case_hir_eval(name: &str, source: &str, a: u32, b: u32) {
         .symbol_manager()
         .lookup_symbol_ref(
             &SymbolPath::new([
-                SymbolNameComponent::Component("root_ns:root@1.0.0".into()),
                 SymbolNameComponent::Component(SymbolName::intern(pkg_name.as_str())),
                 SymbolNameComponent::Leaf("entrypoint".into()),
             ])
