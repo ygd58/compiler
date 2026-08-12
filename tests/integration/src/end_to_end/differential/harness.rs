@@ -352,12 +352,16 @@ pub(super) fn run_case_hir_eval(name: &str, source: &str, a: u32, b: u32) {
     let result = evaluator
         .eval(
             &op.borrow(),
-            [Value::Immediate(Immediate::U32(a)), Value::Immediate(Immediate::U32(b))],
+            [
+                Value::Immediate(Immediate::I32(a as i32)),
+                Value::Immediate(Immediate::I32(b as i32)),
+            ],
         )
         .unwrap_or_else(|err| panic!("HIR eval trapped: {err}"));
-    let Value::Immediate(Immediate::U32(hir_eval_out)) = result[0] else {
-        panic!("expected u32 immediate result from HIR eval, got {:?}", result[0]);
+    let Value::Immediate(Immediate::I32(hir_eval_out)) = result[0] else {
+        panic!("expected i32 immediate result from HIR eval, got {:?}", result[0]);
     };
+    let hir_eval_out = hir_eval_out as u32;
 
     println!(
         "{name}({a}, {b}): native={native_out}, hir_eval={hir_eval_out}, masm={masm_out}"
