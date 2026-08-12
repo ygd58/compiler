@@ -299,7 +299,7 @@ fn build_host_cdylib(project_root: &std::path::Path, pkg_name: &str) -> PathBuf 
 /// in how the HIR was built/folded. If HIR-eval *also* diverges from native: the bug is
 /// upstream of MASM lowering, in HIR construction (e.g. a folding pass).
 pub(super) fn run_case_hir_eval(name: &str, source: &str, a: u32, b: u32) {
-    use midenc_hir::{Immediate, SymbolNameComponent, SymbolPath};
+    use midenc_hir::{Immediate, Op, SymbolNameComponent, SymbolPath, SymbolTable};
     use midenc_hir_eval::{HirEvaluator, Value};
 
     let pkg_name = format!("differential_{name}");
